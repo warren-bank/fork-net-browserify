@@ -8,8 +8,11 @@ var debug = util.debuglog('net');
 var proxy = {
   protocol: (window.location.protocol == 'https:') ? 'wss' : 'ws',
   hostname: window.location.hostname,
-  port: window.location.port,
-  path: '/api/vm/net'
+  port:     window.location.port,
+  remote:   null,
+  api:      {
+    path: '/api/vm/net'
+  }
 };
 function getProxy() {
   return proxy;
@@ -36,8 +39,13 @@ exports.setProxy = function (options) {
   if (options.port) {
     proxy.port = options.port;
   }
-  if (options.path) {
-    proxy.path = options.path;
+  if (options.remote && (typeof options.remote === 'object') && options.remote.address && options.remote.family && options.remote.port) {
+    // https://nodejs.org/api/net.html#socketaddress
+    //   example: {address: '127.0.0.1', family: 'IPv4', port: 12346}
+    proxy.remote = options.remote;
+  }
+  if ((options.api === false) || (options.api && (typeof options.api === 'object') && (typeof options.api.path === 'string'))) {
+    proxy.api = options.api;
   }
 };
 
@@ -267,6 +275,7 @@ Socket.prototype.write = function(chunk, encoding, cb) {
 
 Socket.prototype.connect = function(options, cb) {
   var self = this;
+  var remote;
   
   if (!util.isObject(options)) {
     // Old API:
@@ -289,52 +298,72 @@ Socket.prototype.connect = function(options, cb) {
   self.writable = true;
   self._host = options.host;
 
-  var req = http.request({
-    hostname: getProxy().hostname,
-    port: getProxy().port,
-    path: getProxy().path + '/connect',
-    method: 'POST',
-    withCredentials: false
-  }, function (res) {
-    var json = '';
-    res.on('data', function (buf) {
-      json += buf;
-    });
-    res.on('end', function () {
-      var data = null;
-      try {
-        data = JSON.parse(json);
-      } catch (e) {
-        data = {
-          code: res.statusCode,
-          error: json
-        };
-      }
+  if (getProxy().api) {
+    var req = http.request({
+      hostname: getProxy().hostname,
+      port: getProxy().port,
+      path: getProxy().api.path + '/connect',
+      method: 'POST',
+      withCredentials: false
+    }, function (res) {
+      var json = '';
+      res.on('data', function (buf) {
+        json += buf;
+      });
+      res.on('end', function () {
+        var data = null;
+        try {
+          data = JSON.parse(json);
+        } catch (e) {
+          data = {
+            code: res.statusCode,
+            error: json
+          };
+        }
 
-      if (data.error) {
-        self.emit('error', 'Cannot open TCP connection ['+res.statusCode+']: '+data.error);
-        self.destroy();
-        return;
-      }
-
-      self.remoteAddress = data.remote.address;
-      self.remoteFamily = data.remote.family;
-      self.remotePort = data.remote.port;
-
-      self._connectWebSocket(data.token, function (err) {
-        if (err) {
-          cb(err);
+        if (data.error) {
+          self.emit('error', 'Cannot open TCP connection ['+res.statusCode+']: '+data.error);
+          self.destroy();
           return;
         }
 
-        cb();
-      });
-    });
-   });
+        remote = data.remote || {};
+        self.remoteAddress = remote.address;
+        self.remoteFamily  = remote.family;
+        self.remotePort    = remote.port;
 
-  req.setHeader('Content-Type', 'application/json');
-  req.write(JSON.stringify(options));
-  req.end();
+        self._connectWebSocket(data.token, function (err) {
+          if (err) {
+            cb(err);
+            return;
+          }
+
+          cb();
+        });
+      });
+     });
+
+    req.setHeader('Content-Type', 'application/json');
+    req.write(JSON.stringify(options));
+    req.end();
+  }
+  else {
+    remote = getProxy().remote;
+    if (remote) {
+      self.remoteAddress = remote.address;
+      self.remoteFamily  = remote.family;
+      self.remotePort    = remote.port;
+    }
+
+    self._connectWebSocket(null, function (err) {
+      if (err) {
+        cb(err);
+        return;
+      }
+
+      cb();
+    });
+  }
 
   return this;
 };
@@ -349,7 +378,12 @@ Socket.prototype._connectWebSocket = function (token, cb) {
     return;
   }
 
-  this._ws = new WebSocket(getProxyOrigin() + getProxy().path + '/socket?token='+token);
+  var wsUrl = getProxyOrigin();
+  if (getProxy().api && token) {
+    wsUrl += getProxy().api.path + '/socket?token=' + token;
+  }
+
+  this._ws = new WebSocket(wsUrl);
   this._handleWebsocket();
 
   if (cb) {
