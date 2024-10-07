@@ -1,0 +1,38 @@
+{
+  "name": "@warren-bank/net-browserify-api-proxy-server",
+  "version": "1.0.0",
+  "main": "lib/server.js",
+  "description": "Fork of 'net-browserify@0.2.4'. Only includes the API proxy server. Updates and CLI.",
+  "license": "GPL-2.0",
+  "bin": {
+    "net-browserify-api-proxy-server": "bin/index.js"
+  },
+  "scripts": {
+    "start": "node bin/index.js"
+  },
+  "dependencies": {
+    "@warren-bank/node-process-argv": "^1.2.1",
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "express-ws": "^4.0.0"
+  },
+  "author": {
+    "name": "Warren R. Bank",
+    "email": "warren.r.bank@gmail.com",
+    "url": "https://github.com/warren-bank"
+  },
+  "contributors": [{
+    "name": "Emersion",
+    "email": "contact@emersion.fr"
+  }],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/warren-bank/fork-net-browserify"
+  },
+  "homepage": "https://github.com/warren-bank/fork-net-browserify/tree/fork/server",
+  "keywords": [
+    "browserify",
+    "net",
+    "browser"
+  ]
+}

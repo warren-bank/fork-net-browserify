@@ -1,0 +1,26 @@
+{
+  "name": "@warren-bank/net-browserify",
+  "version": "1.0.0",
+  "main": "index.js",
+  "description": "Fork of 'net-browserify@0.2.4'. Only includes the library. Adds support for using with other proxy servers.",
+  "license": "GPL-2.0",
+  "author": {
+    "name": "Warren R. Bank",
+    "email": "warren.r.bank@gmail.com",
+    "url": "https://github.com/warren-bank"
+  },
+  "contributors": [{
+    "name": "Emersion",
+    "email": "contact@emersion.fr"
+  }],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/warren-bank/fork-net-browserify"
+  },
+  "homepage": "https://github.com/warren-bank/fork-net-browserify/tree/fork/client",
+  "keywords": [
+    "browserify",
+    "net",
+    "browser"
+  ]
+}
